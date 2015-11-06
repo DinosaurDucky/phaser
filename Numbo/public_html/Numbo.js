@@ -4,11 +4,12 @@ var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
 var platforms;
 var cursors;
 var bricks;
-var gametime = 0;
-var NEXT_BRICK_ID = 0;
-var SPAWN_TIMER = 2;
 var lit_bricks = [];
 
+var NEXT_BRICK_ID = 0;
+var SPAWN_TIMER = 2;
+
+var gametime = 0;
 var score = 0;
 var scoreText;
 
@@ -49,6 +50,16 @@ function create() {
 
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
 
+    game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR).onDown.add(hitSpace);
+}
+
+function hitSpace() {
+    console.log("spacebard!");
+    for (b in lit_bricks) {
+        lit_bricks[b].loadTexture('brick_orange');
+        lit_bricks[b].highlighted = false;
+    }
+    lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
 }
 
 function brickMaker() {
