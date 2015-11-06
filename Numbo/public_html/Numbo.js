@@ -5,6 +5,12 @@ var platforms;
 var cursors;
 var bricks;
 var gametime = 0;
+var NEXT_BRICK_ID = 0;
+var SPAWN_TIMER = 2;
+var lit_bricks = [];
+
+var score = 0;
+var scoreText;
 
 function preload() {
     game.load.image('logo', 'phaser.png');
@@ -33,15 +39,29 @@ function create() {
     bricks = game.add.group(game, game, true, true);
     bricks.enableBody = true;
 
-    for (var i = 0; i < 30; ++i) {
+    for (var i = 0; i < 6; ++i) {
         var brick = Brick(Math.floor(Math.random() * 800), 0,
                 Math.floor(Math.random() * 20));
     }
 
+    scoreText = game.add.text(16, 16, 'score: 0',
+            {fontSize: '32px', fill: '#000'});
+
+    game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
+
+}
+
+function brickMaker() {
+    var x = Math.floor(Math.random() * game.width);
+    var y = 0;
+    var number = Math.floor(Math.random() * 20);
+    Brick(x, y, number);
+    game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
 }
 
 function Brick(x, y, number) {
     var brick = bricks.create(x, y, 'brick_orange');
+    brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
     bricks.add(brick);
     brick.number = number
     brick.anchor.set(.5);
@@ -56,7 +76,7 @@ function Brick(x, y, number) {
         dx = -15;
     }
     var text = game.add.text(dx - brick.width / 4, -brick.height / 2 - 3,
-            brick.number, {font: "42px Arial", fill: "#ffffff"});
+            brick.number.toString(), {font: "42px Arial", fill: "#ffffff"});
     brick.addChild(text);
 
     // brick mouse event:
@@ -67,7 +87,7 @@ function Brick(x, y, number) {
 }
 
 function clickBrick(brick) {
-    console.log('clicked a brick!')
+    console.log("clicked brick #" + brick.id);
     if (brick.highlighted) {
         brick.loadTexture('brick_orange');
         brick.highlighted = false;
@@ -75,13 +95,34 @@ function clickBrick(brick) {
     else {
         brick.loadTexture('brick_orange_highlight');
         brick.highlighted = true;
+        lit_bricks.push(brick);
+        checkSum(brick);
+    }
+}
+
+function checkSum(brick) {
+    if (lit_bricks.length == 1)
+        return;
+
+    var sum = -2 * brick.number;
+    for (b in lit_bricks)
+        sum += lit_bricks[b].number;
+
+    if (sum == 0) {
+        score += lit_bricks.length;
+        scoreText.text = 'Score: ' + score;
+        for (b in lit_bricks) {
+            console.log("killing brick, id:" + lit_bricks[b].id);
+            lit_bricks[b].kill();
+        }
+        lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
     }
 }
 
 
 function update() {
     ++gametime;
-    
+
     game.physics.arcade.collide(bricks, platforms);
     game.physics.arcade.collide(bricks, bricks);
 
