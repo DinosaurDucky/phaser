@@ -1,13 +1,18 @@
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
+var NEXT_BRICK_ID = 0;
+var SPAWN_TIMER = 2;
+var UI_WIDTH = 300;
+var PLAY_WIDTH = game.width - UI_WIDTH;
+var COLUMN_WIDTH = 50;
+var NUM_COLUMNS = Math.floor(PLAY_WIDTH / COLUMN_WIDTH);
+var MAX_RANDOM = 20;
+
 var platforms;
 var cursors;
 var bricks;
 var lit_bricks = [];
-
-var NEXT_BRICK_ID = 0;
-var SPAWN_TIMER = 2;
 
 var gametime = 0;
 var score = 0;
@@ -25,6 +30,7 @@ function preload() {
 
 function create() {
 
+    /* most of this crap should leave: */
     game.physics.startSystem(Phaser.Physics.ARCADE);
     game.add.sprite(0, 0, 'sky');
     platforms = game.add.group();
@@ -36,13 +42,14 @@ function create() {
     ledge.body.immovable = true;
     ledge = platforms.create(-150, 250, 'ground');
     ledge.body.immovable = true;
+    /* /leave */
 
     bricks = game.add.group(game, game, true, true);
     bricks.enableBody = true;
 
+
     for (var i = 0; i < 6; ++i) {
-        var brick = Brick(Math.floor(Math.random() * 800), 0,
-                Math.floor(Math.random() * 20));
+        var brick = Brick(-1, -1, -1);
     }
 
     scoreText = game.add.text(16, 16, 'score: 0',
@@ -63,20 +70,26 @@ function hitSpace() {
 }
 
 function brickMaker() {
-    var x = Math.floor(Math.random() * game.width);
-    var y = 0;
-    var number = Math.floor(Math.random() * 20);
-    Brick(x, y, number);
+    Brick(-1, -1, -1);
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker);
 }
 
+// negative params for defaults. x default: random colum. y default: 0.
+// number default: random int in {1, 2, ..., MAX_RANDOM}
 function Brick(x, y, number) {
+    if (x < 0)
+        x = 25 + Math.floor(Math.random() * NUM_COLUMNS) * COLUMN_WIDTH;
+    if (y < 0)
+        y = 0;
+    if (number < 0)
+        number = Math.floor(Math.random() * MAX_RANDOM + 1);
+    
     var brick = bricks.create(x, y, 'brick_orange');
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
     bricks.add(brick);
     brick.number = number
     brick.anchor.set(.5);
-    brick.scale.setTo(.5, .5);
+    brick.scale.setTo(.55, .55);
     brick.body.gravity.y = 20 + brick.number;
     brick.body.bounce.x = 0.5;
     brick.body.bounce.y = 0.2;
@@ -91,8 +104,7 @@ function Brick(x, y, number) {
     brick.highlighted = false;
     brick.inputEnabled = true;
     brick.events.onInputDown.add(clickBrick, this);
-    
-    
+
     return brick;
 }
 
