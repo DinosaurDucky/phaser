@@ -67,7 +67,7 @@ function brickMaker() {
     var y = 0;
     var number = Math.floor(Math.random() * 20);
     Brick(x, y, number);
-    game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
+    game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker);
 }
 
 function Brick(x, y, number) {
@@ -81,19 +81,18 @@ function Brick(x, y, number) {
     brick.body.bounce.x = 0.5;
     brick.body.bounce.y = 0.2;
 
-    // brick number text:
-    var dx = 0;
-    if (brick.number >= 10) {
-        dx = -15;
-    }
-    var text = game.add.text(dx - brick.width / 4, -brick.height / 2 - 3,
-            brick.number.toString(), {font: "42px Arial", fill: "#ffffff"});
+    // brick number text:    
+    var text = game.add.text(0, 0, brick.number.toString(),
+            {font: "42px Helvetica", fill: "#aaffff"});
+    text.anchor.set(0.5);
     brick.addChild(text);
 
     // brick mouse event:
     brick.highlighted = false;
     brick.inputEnabled = true;
     brick.events.onInputDown.add(clickBrick, this);
+    
+    
     return brick;
 }
 
