@@ -39,6 +39,7 @@ function create() {
     var ground = platforms.create(0, game.world.height - 200, 'ground');
     ground.scale.setTo(1.25, 8);
     ground.body.immovable = true;
+    ground.body.bounce.set(0);
 
     /* /leave */
 
