@@ -14,7 +14,7 @@ var cursors;
 var bricks;
 var lit_bricks = [];
 
-var gametime = 0;
+var GAME_TIME = 0;
 var score = 0;
 var scoreText;
 
@@ -32,16 +32,14 @@ function create() {
 
     /* most of this crap should leave: */
     game.physics.startSystem(Phaser.Physics.ARCADE);
-    game.add.sprite(0, 0, 'sky');
+    var sky = game.add.sprite(0, 0, 'sky');
+    sky.scale.setTo(5 / 8, 1);
     platforms = game.add.group();
     platforms.enableBody = true;
-    var ground = platforms.create(0, game.world.height - 64, 'ground');
-    ground.scale.setTo(2, 2);
+    var ground = platforms.create(0, game.world.height - 200, 'ground');
+    ground.scale.setTo(1.25, 8);
     ground.body.immovable = true;
-    var ledge = platforms.create(400, 400, 'ground');
-    ledge.body.immovable = true;
-    ledge = platforms.create(-150, 250, 'ground');
-    ledge.body.immovable = true;
+
     /* /leave */
 
     bricks = game.add.group(game, game, true, true);
@@ -52,9 +50,10 @@ function create() {
         var brick = Brick(-1, -1, -1);
     }
 
-    scoreText = game.add.text(16, 16, 'score: 0',
-            {fontSize: '32px', fill: '#000'});
-
+    scoreText = game.add.text(PLAY_WIDTH + 16, 16, 'score: 0',
+            {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+            
+            
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
 
     game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR).onDown.add(hitSpace);
@@ -83,7 +82,7 @@ function Brick(x, y, number) {
         y = 0;
     if (number < 0)
         number = Math.floor(Math.random() * MAX_RANDOM + 1);
-    
+
     var brick = bricks.create(x, y, 'brick_orange');
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
     bricks.add(brick);
@@ -143,7 +142,7 @@ function checkSum(brick) {
 
 
 function update() {
-    ++gametime;
+    ++GAME_TIME;
 
     game.physics.arcade.collide(bricks, platforms);
     game.physics.arcade.collide(bricks, bricks);
