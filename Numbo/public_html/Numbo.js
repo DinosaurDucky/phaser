@@ -152,45 +152,45 @@ function getRow(brick) {
 }
 
 function areAdjacent(b1, b2) {
+    if (b1 == b2)
+        return false;
+    
     var c1 = getCol(b1);
     var c2 = getCol(b2);
-
-    if (Math.abs(c1 - c2) > 1) {
-        console.log("c1-c2 = " + Math.abs(c1 - c2));
+    if (Math.abs(c1 - c2) > 1)
         return false;
-    }
+
     var r1 = getRow(b1);
     var r2 = getRow(b2);
-    if (Math.abs(r1 - r2) > 1) {
-        console.log("r1-r2 = " + Math.abs(r1 - r2));
+    if (Math.abs(r1 - r2) > 1)
         return false;
-    }
+
     return true;
 }
 
 function clickBrick(brick) {
-    //console.log("clicked brick #" + brick.id);
 
-    if (lit_bricks.length > 0) {
-        if (areAdjacent(brick, lit_bricks[lit_bricks.length - 1])) {
-            console.log("adjacent!");
+    if (lit_bricks.length == 0 ||
+            areAdjacent(brick, lit_bricks[lit_bricks.length - 1])) {
+        /*
+         if (brick.highlighted) {
+         brick.loadTexture('brick_orange');
+         brick.highlighted = false;
+         for (b in lit_bricks){
+         if (b.id == brick.id)
+         lit_bricks.splice(b, 1);
+         }
+         }
+         else {
+         */
+        if (!brick.hightlighted) {
+            brick.loadTexture('brick_orange_highlight');
+            brick.highlighted = true;
+            lit_bricks.push(brick);
+            checkSum(brick);
         }
-        else {
-            console.log("NOT adjacent");
-        }
-    }
 
-    if (brick.highlighted) {
-        brick.loadTexture('brick_orange');
-        brick.highlighted = false;
     }
-    else {
-        brick.loadTexture('brick_orange_highlight');
-        brick.highlighted = true;
-        lit_bricks.push(brick);
-        checkSum(brick);
-    }
-
 
 }
 
