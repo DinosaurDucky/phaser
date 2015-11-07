@@ -8,11 +8,12 @@ var PLAY_WIDTH = game.width - UI_WIDTH;
 var COLUMN_WIDTH = 100;
 var NUM_COLUMNS = Math.floor(PLAY_WIDTH / COLUMN_WIDTH);
 var NUM_ROWS = NUM_COLUMNS;
-var MAX_RANDOM = 20;
+var MAX_RANDOM = 5;
 
 var platforms;
 var cursors;
 var bricks;
+var bottom_bricks;
 var lit_bricks = [];
 var brick_grid = []; //2d: [col][row]
 
@@ -54,6 +55,8 @@ function create() {
         var brick = Brick(-1, -1, -1);
     }
 
+    bottom_bricks = game.add.group(game, game, true, true);
+
     scoreText = game.add.text(PLAY_WIDTH + 16, 16, 'score: 0',
             {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
 
@@ -70,6 +73,7 @@ function hitSpace() {
         lit_bricks[b].highlighted = false;
     }
     lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
+    bottom_bricks.destroy(true, true);
 }
 
 function brickMaker() {
@@ -117,6 +121,23 @@ function Brick(x, y, number) {
     return brick;
 }
 
+function copyToBottom(brick) {
+    var index = lit_bricks.length;
+    var bottomBrick = bottom_bricks.create(index * COLUMN_WIDTH / 2, 500, 'brick_orange');
+    bottom_bricks.add(bottomBrick);
+    bottomBrick.number = brick.number;
+    bottomBrick.anchor.set(0.5);
+    bottomBrick.scale.setTo(.55, .55);
+
+    // brick number text:    
+    var text = game.add.text(0, 0, bottomBrick.number.toString(),
+            {font: "42px Helvetica", fill: "#aaffff"});
+    text.anchor.set(0.5);
+    bottomBrick.addChild(text);
+
+    return bottomBrick;
+}
+
 function findTopOfColumn(col) {
     if (col < 0 || col >= NUM_COLUMNS)
         return null;
@@ -154,7 +175,7 @@ function getRow(brick) {
 function areAdjacent(b1, b2) {
     if (b1 == b2)
         return false;
-    
+
     var c1 = getCol(b1);
     var c2 = getCol(b2);
     if (Math.abs(c1 - c2) > 1)
@@ -169,29 +190,17 @@ function areAdjacent(b1, b2) {
 }
 
 function clickBrick(brick) {
-
     if (lit_bricks.length == 0 ||
             areAdjacent(brick, lit_bricks[lit_bricks.length - 1])) {
-        /*
-         if (brick.highlighted) {
-         brick.loadTexture('brick_orange');
-         brick.highlighted = false;
-         for (b in lit_bricks){
-         if (b.id == brick.id)
-         lit_bricks.splice(b, 1);
-         }
-         }
-         else {
-         */
         if (!brick.hightlighted) {
             brick.loadTexture('brick_orange_highlight');
             brick.highlighted = true;
             lit_bricks.push(brick);
+            copyToBottom(brick);
             checkSum(brick);
+
         }
-
     }
-
 }
 
 function checkSum(brick) {
@@ -211,6 +220,7 @@ function checkSum(brick) {
             lit_bricks[b].kill();
         }
         lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
+        bottom_bricks.destroy(true, true);
     }
 }
 
