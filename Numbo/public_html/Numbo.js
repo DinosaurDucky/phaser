@@ -5,9 +5,10 @@ var NEXT_BRICK_ID = 0;
 var SPAWN_TIMER = 2;
 var UI_WIDTH = 300;
 var PLAY_WIDTH = game.width - UI_WIDTH;
-var COLUMN_WIDTH = 100;
+var COLUMN_WIDTH = 70;
 var NUM_COLUMNS = Math.floor(PLAY_WIDTH / COLUMN_WIDTH);
 var NUM_ROWS = NUM_COLUMNS;
+var COLUMN_HEIGHT = COLUMN_WIDTH;
 var MAX_RANDOM = 5;
 
 var platforms;
@@ -34,22 +35,31 @@ function preload() {
 function create() {
 
     /* most of this crap should leave: */
-    game.physics.startSystem(Phaser.Physics.ARCADE);
+
+    /*
+     //phys1
+     game.physics.startSystem(Phaser.Physics.ARCADE);
+     
+     platforms.enableBody = true;
+     ground.body.immovable = true;
+     ground.body.bounce.set(0);
+     */
     var sky = game.add.sprite(0, 0, 'sky');
     sky.scale.setTo(5 / 8, 1);
     platforms = game.add.group();
-    platforms.enableBody = true;
     var ground = platforms.create(0, game.world.height - 200, 'ground');
     ground.scale.setTo(1.25, 8);
-    ground.body.immovable = true;
-    ground.body.bounce.set(0);
+
     /* /leave */
 
     for (var i = 0; i < NUM_COLUMNS; ++i)
         brick_grid.push([]);
 
+    /*
+     // phys2
+     bricks.enableBody = true;
+     */
     bricks = game.add.group(game, game, true, true);
-    bricks.enableBody = true;
 
     for (var i = 0; i < 1; ++i) {
         var brick = Brick(-1, -1, -1);
@@ -68,15 +78,15 @@ function create() {
 }
 
 // TODO: figure out why the fuck this shit odnt work
-function twerkBottom(){
+function twerkBottom() {
     if (bottom_bricks.length < 2)
         return;
-    
+
     b1 = bottom_bricks.getAt(0);
     b2 = bottom_bricks.getAt(1);
-    
-    game.add.tween(b1).to({x: b2.x, y:b2.y}, 100, Phaser.Easing.Linear.In, true);
-    game.add.tween(b2).to({x: b1.x, y:b1.y}, 100, Phaser.Easing.Linear.In, true);
+
+    game.add.tween(b1).to({x: b2.x, y: b2.y}, 100, Phaser.Easing.Linear.In, true);
+    game.add.tween(b2).to({x: b1.x, y: b1.y}, 100, Phaser.Easing.Linear.In, true);
 }
 
 function hitSpace() {
@@ -94,44 +104,57 @@ function brickMaker() {
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker);
 }
 
+function sinkBrick(brick, row) {
+    game.add.tween(brick).to({y: rowToY(row)}, 100,
+            Phaser.Easing.Linear.In, true);
+}
+
+function sinkAll(){
+    for (var col = 0; col < brick_grid.length; ++col){
+        sinkColumn(col);
+    }
+}
+function sinkColumn(col){
+    for (var row = 0; row < brick_grid[col].length; ++row){
+        sinkBrick(brick_grid[col][row], row);
+    }
+    
+}
+
 // negative params for defaults. x default: random colum. y default: 0.
 // number default: random int in {1, 2, ..., MAX_RANDOM}
-function Brick(x, y, number) {
-    if (x < 0)
-        x = COLUMN_WIDTH / 2
-                + Math.floor(Math.random() * NUM_COLUMNS) * COLUMN_WIDTH;
-    if (y < 0)
-        y = 0;
+function Brick(col, row, number) {
+    if (col < 0)
+        col = Math.floor(Math.random() * NUM_COLUMNS);
+    if (row < 0)
+        row = findTopOfColumn(col);
     if (number < 0)
         number = Math.floor(Math.random() * MAX_RANDOM + 1);
 
-    var brick = bricks.create(x, y, 'brick_orange');
+    // create brick:
+    console.log("brick row:" + row + "rowtoy: " + rowToY(row));
+    var brick = bricks.create(colToX(col), 0, 'brick_orange'); // maybe rowToY()?
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
     bricks.add(brick);
     brick.number = number
     brick.anchor.set(.5);
     brick.scale.setTo(.55, .55);
-    brick.body.gravity.y = 20 + brick.number;
-    brick.body.bounce.x = 0.5;
-    brick.body.bounce.y = 0.2;
 
-    // brick number text:    
+    brick_grid[col][row] = brick;
+
+    // brick number text:  
     var text = game.add.text(0, 0, brick.number.toString(),
             {font: "42px Helvetica", fill: "#aaffff"});
     text.anchor.set(0.5);
     brick.addChild(text);
+
+    sinkBrick(brick, row);
 
     // brick mouse event:
     brick.highlighted = false;
     brick.inputEnabled = true;
     brick.events.onInputDown.add(clickBrick, this);
 
-    //insert brick into brick_grid
-    var col = Math.floor(brick.x / COLUMN_WIDTH);
-    var row = findTopOfColumn(col);
-    brick_grid[col][row] = brick;
-    //console.log("num=" + brick.number + ", col= " + col + ', row=' + row);
-    return brick;
 }
 
 function copyToBottom(brick) {
@@ -153,10 +176,10 @@ function copyToBottom(brick) {
 
 function findTopOfColumn(col) {
     if (col < 0 || col >= NUM_COLUMNS)
-        return null;
+        return -2; // flag: invalid column
     if (brick_grid[col].length < NUM_ROWS)
         return brick_grid[col].length;
-    return -1; // flag: too many in this column
+    return -1; // flag: too many bricks already in this column (it's full)
 }
 
 function removeBrickById(id) {
@@ -172,12 +195,12 @@ function removeBrickById(id) {
     }
 }
 
-function colToX(col){
-    return col * COLUMN_WIDTH;
+function colToX(col) {
+    return Math.floor(COLUMN_WIDTH / 3) + col * COLUMN_WIDTH;
 }
 
-function rowToY(row){
-    return row * COLUMN_HEIGHT;
+function rowToY(row) {
+    return 400 - row * COLUMN_HEIGHT;
 }
 
 function getCol(brick) {
@@ -242,6 +265,7 @@ function checkSum(brick) {
         }
         lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
         bottom_bricks.destroy(true, true);
+        sinkAll();
     }
 }
 
@@ -249,7 +273,9 @@ function checkSum(brick) {
 function update() {
     ++GAME_TIME;
 
-    game.physics.arcade.collide(bricks, platforms);
-    game.physics.arcade.collide(bricks, bricks);
-
+    /*
+     //phys3
+     game.physics.arcade.collide(bricks, platforms);
+     game.physics.arcade.collide(bricks, bricks);
+     */
 }
