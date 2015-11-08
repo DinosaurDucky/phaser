@@ -109,16 +109,16 @@ function sinkBrick(brick, row) {
             Phaser.Easing.Linear.In, true);
 }
 
-function sinkAll(){
-    for (var col = 0; col < brick_grid.length; ++col){
+function sinkAll() {
+    for (var col = 0; col < brick_grid.length; ++col) {
         sinkColumn(col);
     }
 }
-function sinkColumn(col){
-    for (var row = 0; row < brick_grid[col].length; ++row){
+function sinkColumn(col) {
+    for (var row = 0; row < brick_grid[col].length; ++row) {
         sinkBrick(brick_grid[col][row], row);
     }
-    
+
 }
 
 // negative params for defaults. x default: random colum. y default: 0.
@@ -132,7 +132,6 @@ function Brick(col, row, number) {
         number = Math.floor(Math.random() * MAX_RANDOM + 1);
 
     // create brick:
-    console.log("brick row:" + row + "rowtoy: " + rowToY(row));
     var brick = bricks.create(colToX(col), 0, 'brick_orange'); // maybe rowToY()?
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
     bricks.add(brick);
@@ -241,7 +240,8 @@ function clickBrick(brick) {
             brick.highlighted = true;
             lit_bricks.push(brick);
             copyToBottom(brick);
-            checkSum(brick);
+            if (lit_bricks.length >= 3)
+                checkSum(brick);
 
         }
     }
