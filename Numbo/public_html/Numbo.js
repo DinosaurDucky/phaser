@@ -64,6 +64,19 @@ function create() {
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
 
     game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR).onDown.add(hitSpace);
+    game.input.keyboard.addKey(Phaser.Keyboard.A).onDown.add(twerkBottom);
+}
+
+// TODO: figure out why the fuck this shit odnt work
+function twerkBottom(){
+    if (bottom_bricks.length < 2)
+        return;
+    
+    b1 = bottom_bricks.getAt(0);
+    b2 = bottom_bricks.getAt(1);
+    
+    game.add.tween(b1).to({x: b2.x, y:b2.y}, 100, Phaser.Easing.Linear.In, true);
+    game.add.tween(b2).to({x: b1.x, y:b1.y}, 100, Phaser.Easing.Linear.In, true);
 }
 
 function hitSpace() {
@@ -157,6 +170,14 @@ function removeBrickById(id) {
             }
         }
     }
+}
+
+function colToX(col){
+    return col * COLUMN_WIDTH;
+}
+
+function rowToY(row){
+    return row * COLUMN_HEIGHT;
 }
 
 function getCol(brick) {
