@@ -2,17 +2,19 @@
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
 var NEXT_BRICK_ID = 0;
-var SPAWN_TIMER = 1;
+
+
+var SPAWN_TIMER = 3; // param
+var MAX_RANDOM = 5; // param
+var COLLAPSE_EMPTY_COLUMNS = true; // param
+var NUM_COLUMNS = 6 // param
+var NUM_ROWS = 6 // param
 var UI_WIDTH = 300;
 var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
 var PLAY_HEIGHT = game.height - UI_HEIGHT;
-var NUM_COLUMNS = 6
-var NUM_ROWS = 6
 var COLUMN_WIDTH = Math.floor(PLAY_WIDTH / NUM_COLUMNS);
 var ROW_HEIGHT = Math.floor(PLAY_HEIGHT / NUM_ROWS);
-
-var MAX_RANDOM = 5;
 
 var platforms;
 var cursors;
@@ -49,10 +51,6 @@ function create() {
 
     bricks = game.add.group(game, game, true, true);
 
-    for (var i = 0; i < 1; ++i) {
-        var brick = Brick(-1, -1, -1);
-    }
-
     bottom_bricks = game.add.group(game, game, true, true);
 
     scoreText = game.add.text(PLAY_WIDTH + 16, 16, 'score: 0',
@@ -67,34 +65,30 @@ function create() {
 // negative params for defaults. x default: random column. y default: 0.
 // number default: random int in {1, 2, ..., MAX_RANDOM}
 function Brick(col, row, number) {
-
     // try 20 times to find an empty row; if none found, assume all are full:
     var attempts = 0;
     while (attempts < 20 && (col < 0 || brick_grid[col].length >= NUM_ROWS)) {
         col = Math.floor(Math.random() * NUM_COLUMNS);
         ++attempts;
     }
-    if (col < 0 || brick_grid[col].length >= NUM_ROWS) {
+    if (col < 0 || brick_grid[col].length >= NUM_ROWS)
         return null;
-    }
 
     if (row < 0)
         row = findTopOfColumn(col);
-
     if (number < 0)
         number = Math.floor(Math.random() * MAX_RANDOM + 1);
 
-// create brick:
+    // create brick:
     var brick = bricks.create(colToX(col), 0, 'brick_orange'); // maybe rowToY()?
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
     bricks.add(brick);
     brick.number = number
     brick.anchor.set(.5);
     brick.scale.setTo(0.7, 0.7);
-
     brick_grid[col][row] = brick;
 
-// brick number text:  
+    // brick number text:  
     var text = game.add.text(0, 0, brick.number.toString(),
             {font: "42px Helvetica", fill: "#aaffff"});
     text.anchor.set(0.5);
@@ -102,17 +96,19 @@ function Brick(col, row, number) {
 
     sinkBrick(brick, row);
 
-// brick mouse event:
+    // brick mouse event:
     brick.highlighted = false;
     brick.inputEnabled = true;
     brick.events.onInputDown.add(clickBrick, this);
+
+    if (COLLAPSE_EMPTY_COLUMNS)
+        game.time.events.add(100, collapseColumns);
 
 }
 
 function brickMaker() {
     Brick(-1, -1, -1);
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker);
-    //collapseColumns();
 }
 
 function sinkBrick(brick, row) {
@@ -194,7 +190,7 @@ function checkSum(brick) {
         lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
         bottom_bricks.destroy(true, true);
         sinkAll();
-        //collapseColumns();
+        collapseColumns();
     }
 }
 function removeBrickById(id) {
@@ -219,25 +215,72 @@ function hitSpace() {
 }
 
 function collapseColumns() {
-    var middle_col = Math.floor(NUM_COLUMNS / 2);
-    for (var col = NUM_COLUMNS - 1; col >= 0; --col) {
+    var middle_col = NUM_COLUMNS - 1;//Math.floor(NUM_COLUMNS / 2);
+    collapseLeftSide(middle_col);
+    collapseRightSide(middle_col);
+}
+
+function collapseLeftSide(col) {
+    var A = [];
+    for (var i = 0; i < NUM_COLUMNS; ++i)
+        A[i] = brick_grid[i].length > 0;
+    console.log("true=empty:" + A);
+    // find out how many columns to the left of this must be collapsed:
+    var collapsable_cols = 0;
+    for (var left_iter = col; left_iter >= 0; --left_iter) {
+        //console.log("col " + left_iter + " length: " + brick_grid[left_iter].length);
+        if (brick_grid[left_iter].length > 0)
+            ++collapsable_cols;
+    }
+    console.log(collapsable_cols + " collaps. rows");
+
+    // collapse that many rows:
+    while (col >= 0 && collapsable_cols > 0) {
         if (brick_grid[col].length == 0) {
-            collapseColumnRight(col);
+            console.log("col " + col + " empty.")
+            brick_grid.splice(col, 1);
+            brick_grid.unshift([]);
+            twerkColumnOver(col);
+        }
+        else {
+            console.log("col " + col + " NOT empty.");
+            --collapsable_cols;
+            --col;
+
         }
     }
-    for (var col = middle_col + 1; col < NUM_COLUMNS; ++col) {
-
-    }
 }
-function collapseColumnRight(col) {
-
-    brick_grid.splice(col, 1);
-    brick_grid.unshift([]);
-    for (var row = 0; row < brick_grid[col].length; ++row) {
+function collapseRightSide(col) {
+    return;
+}
+function twerkColumnOver(col) {
+    for (var row = 0; row < brick_grid[col].length; ++row)
         game.add.tween(brick_grid[col][row]).to({x: colToX(col)}, 100,
                 Phaser.Easing.Linear.In, true);
-    }
+
 }
+/*
+ function collapseColumns() {
+ var middle_col = Math.floor(NUM_COLUMNS / 2);
+ for (var col = NUM_COLUMNS - 1; col >= 0; --col) {
+ if (brick_grid[col].length == 0) {
+ collapseColumnRight(col);
+ }
+ }
+ for (var col = middle_col + 1; col < NUM_COLUMNS; ++col) {
+ 
+ }
+ }
+ function collapseColumnRight(col) {
+ 
+ brick_grid.splice(col, 1);
+ brick_grid.unshift([]);
+ for (var row = 0; row < brick_grid[col].length; ++row) {
+ game.add.tween(brick_grid[col][row]).to({x: colToX(col)}, 100,
+ Phaser.Easing.Linear.In, true);
+ }
+ }
+ */
 
 function findTopOfColumn(col) {
     if (col < 0 || col >= NUM_COLUMNS)
