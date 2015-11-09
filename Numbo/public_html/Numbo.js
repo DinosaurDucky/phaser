@@ -1,9 +1,6 @@
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
-var NEXT_BRICK_ID = 0;
-
-
 var SPAWN_TIMER = 3; // param
 var MAX_RANDOM = 5; // param
 var COLLAPSE_EMPTY_COLUMNS = true; // param
@@ -15,6 +12,7 @@ var PLAY_WIDTH = game.width - UI_WIDTH;
 var PLAY_HEIGHT = game.height - UI_HEIGHT;
 var COLUMN_WIDTH = Math.floor(PLAY_WIDTH / NUM_COLUMNS);
 var ROW_HEIGHT = Math.floor(PLAY_HEIGHT / NUM_ROWS);
+var NEXT_BRICK_ID = 0;
 
 var platforms;
 var cursors;
@@ -190,7 +188,8 @@ function checkSum(brick) {
         lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
         bottom_bricks.destroy(true, true);
         sinkAll();
-        collapseColumns();
+        if (COLLAPSE_EMPTY_COLUMNS)
+            game.time.events.add(100, collapseColumns);
     }
 }
 function removeBrickById(id) {
@@ -205,7 +204,6 @@ function removeBrickById(id) {
 }
 
 function hitSpace() {
-    console.log("spacebar! clearing bottom.");
     for (b in lit_bricks) {
         lit_bricks[b].loadTexture('brick_orange');
         lit_bricks[b].highlighted = false;
@@ -215,72 +213,65 @@ function hitSpace() {
 }
 
 function collapseColumns() {
-    var middle_col = NUM_COLUMNS - 1;//Math.floor(NUM_COLUMNS / 2);
+    var middle_col = Math.floor(NUM_COLUMNS / 2);
     collapseLeftSide(middle_col);
     collapseRightSide(middle_col);
+    scootColumns();
 }
 
 function collapseLeftSide(col) {
-    var A = [];
-    for (var i = 0; i < NUM_COLUMNS; ++i)
-        A[i] = brick_grid[i].length > 0;
-    console.log("true=empty:" + A);
+
     // find out how many columns to the left of this must be collapsed:
     var collapsable_cols = 0;
     for (var left_iter = col; left_iter >= 0; --left_iter) {
-        //console.log("col " + left_iter + " length: " + brick_grid[left_iter].length);
         if (brick_grid[left_iter].length > 0)
             ++collapsable_cols;
     }
-    console.log(collapsable_cols + " collaps. rows");
 
     // collapse that many rows:
-    while (col >= 0 && collapsable_cols > 0) {
+    while (0 <= col && col < NUM_COLUMNS && collapsable_cols > 0) {
         if (brick_grid[col].length == 0) {
-            console.log("col " + col + " empty.")
-            brick_grid.splice(col, 1);
-            brick_grid.unshift([]);
-            twerkColumnOver(col);
+            brick_grid.splice(col, 1); // delete empty column
+            brick_grid.unshift([]); // insert new empty column at right
         }
         else {
-            console.log("col " + col + " NOT empty.");
             --collapsable_cols;
-            --col;
-
+            ++col;
         }
     }
 }
+
 function collapseRightSide(col) {
-    return;
+
+    // find out how many columns to the right of this must be collapsed:
+    var collapsable_cols = 0;
+    for (var right_iter = col; right_iter < NUM_COLUMNS; ++right_iter) {
+        if (brick_grid[right_iter].length > 0)
+            ++collapsable_cols;
+    }
+
+    // collapse that many rows:
+    while (0 <= col && col < NUM_COLUMNS && collapsable_cols > 0) {
+        if (brick_grid[col].length == 0) {
+            brick_grid.splice(col, 1); // delete empty column
+            brick_grid.push([]); // insert new empty column at left
+        }
+        else {
+            --collapsable_cols;
+            --col;
+        }
+    }
 }
-function twerkColumnOver(col) {
+
+function scootColumns() {
+    for (var col = 0; col < brick_grid.length; ++col)
+        scootColumn(col)
+}
+function scootColumn(col) {
     for (var row = 0; row < brick_grid[col].length; ++row)
         game.add.tween(brick_grid[col][row]).to({x: colToX(col)}, 100,
                 Phaser.Easing.Linear.In, true);
-
 }
-/*
- function collapseColumns() {
- var middle_col = Math.floor(NUM_COLUMNS / 2);
- for (var col = NUM_COLUMNS - 1; col >= 0; --col) {
- if (brick_grid[col].length == 0) {
- collapseColumnRight(col);
- }
- }
- for (var col = middle_col + 1; col < NUM_COLUMNS; ++col) {
- 
- }
- }
- function collapseColumnRight(col) {
- 
- brick_grid.splice(col, 1);
- brick_grid.unshift([]);
- for (var row = 0; row < brick_grid[col].length; ++row) {
- game.add.tween(brick_grid[col][row]).to({x: colToX(col)}, 100,
- Phaser.Easing.Linear.In, true);
- }
- }
- */
 
 function findTopOfColumn(col) {
     if (col < 0 || col >= NUM_COLUMNS)
