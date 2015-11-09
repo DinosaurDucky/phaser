@@ -62,23 +62,11 @@ function create() {
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
 
     game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR).onDown.add(hitSpace);
-    game.input.keyboard.addKey(Phaser.Keyboard.A).onDown.add(twerkBottom);
 }
 
-// TODO: figure out why the fuck this shit odnt work
-function twerkBottom() {
-    if (bottom_bricks.length < 2)
-        return;
-
-    b1 = bottom_bricks.getAt(0);
-    b2 = bottom_bricks.getAt(1);
-
-    game.add.tween(b1).to({x: b2.x, y: b2.y}, 100, Phaser.Easing.Linear.In, true);
-    game.add.tween(b2).to({x: b1.x, y: b1.y}, 100, Phaser.Easing.Linear.In, true);
-}
 
 function hitSpace() {
-    console.log("spacebard!");
+    console.log("spacebar! clearing bottom.");
     for (b in lit_bricks) {
         lit_bricks[b].loadTexture('brick_orange');
         lit_bricks[b].highlighted = false;
@@ -119,6 +107,14 @@ function collapseColumnRight(col) {
     }
 }
 
+"hi. this is a messaged for mike mcCawley, or whomever is now in charge of\n\
+partial IGETC.\n\
+my name is brett hatch, and my student id is 1439073. \n\
+i would like to make an appointment ASAP to discuss my options for fulfilling \n\
+my last igetc GE requirement.\n\
+i can be reached at bhatch@ucsc.edu or 831-246-4617. \n\
+thank you."
+
 function collapseColumns() {
     var middle_col = Math.floor(NUM_COLUMNS / 2);
     for (var col = NUM_COLUMNS - 1; col >= 0; --col) {
@@ -137,8 +133,10 @@ function Brick(col, row, number) {
     // try 20 times to find an empty row; if none found, assume all are full:
     var attempts = 0;
     while (col < 0 && attempts < 20) {
-        col = Math.floor(Math.random() * NUM_COLUMNS);
+        col = Math.floor(Math.random() * NUM_COLUMNS)
         if (brick_grid[col].length == NUM_ROWS) {
+            if (attempts == 0)
+                console.log("col " + col + " full. searching for an empty ool.");
             col = -1;
         }
         ++attempts;
