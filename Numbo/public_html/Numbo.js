@@ -8,7 +8,7 @@ var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
 var PLAY_HEIGHT = game.height - UI_HEIGHT;
 var NUM_COLUMNS = 6
-var NUM_ROWS = 2
+var NUM_ROWS = 6
 var COLUMN_WIDTH = Math.floor(PLAY_WIDTH / NUM_COLUMNS);
 var ROW_HEIGHT = Math.floor(PLAY_HEIGHT / NUM_ROWS);
 
