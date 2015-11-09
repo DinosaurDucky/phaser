@@ -130,22 +130,17 @@ function collapseColumns() {
 // negative params for defaults. x default: random column. y default: 0.
 // number default: random int in {1, 2, ..., MAX_RANDOM}
 function Brick(col, row, number) {
+
     // try 20 times to find an empty row; if none found, assume all are full:
     var attempts = 0;
-    while (col < 0 && attempts < 20) {
-        col = Math.floor(Math.random() * NUM_COLUMNS)
-        if (brick_grid[col].length == NUM_ROWS) {
-            if (attempts == 0)
-                console.log("col " + col + " full. searching for an empty ool.");
-            col = -1;
-        }
+    while (attempts < 20 && (col < 0 || brick_grid[col].length >= NUM_ROWS)) {
+        col = Math.floor(Math.random() * NUM_COLUMNS);
         ++attempts;
     }
-    if (col < 0) {
-        console.log("failed to spawn a brick: looks pretty full...");
+    if (col < 0 || brick_grid[col].length >= NUM_ROWS) {
         return null;
     }
-    
+
     if (row < 0)
         row = findTopOfColumn(col);
 
