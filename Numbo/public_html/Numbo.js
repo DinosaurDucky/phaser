@@ -2,13 +2,16 @@
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
 var NEXT_BRICK_ID = 0;
-var SPAWN_TIMER = 2;
+var SPAWN_TIMER = 1;
 var UI_WIDTH = 300;
+var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
-var COLUMN_WIDTH = 70;
-var NUM_COLUMNS = Math.floor(PLAY_WIDTH / COLUMN_WIDTH);
-var NUM_ROWS = NUM_COLUMNS;
-var COLUMN_HEIGHT = COLUMN_WIDTH;
+var PLAY_HEIGHT = game.height - UI_HEIGHT;
+var NUM_COLUMNS = 6
+var NUM_ROWS = 2
+var COLUMN_WIDTH = Math.floor(PLAY_WIDTH / NUM_COLUMNS);
+var ROW_HEIGHT = Math.floor(PLAY_HEIGHT / NUM_ROWS);
+
 var MAX_RANDOM = 5;
 
 var platforms;
@@ -37,8 +40,9 @@ function create() {
     var sky = game.add.sprite(0, 0, 'sky');
     sky.scale.setTo(5 / 8, 1);
     platforms = game.add.group();
-    var ground = platforms.create(0, game.world.height - 200, 'ground');
-    ground.scale.setTo(1.25, 8);
+    var ground = platforms.create(0,
+            PLAY_HEIGHT + Math.floor(ROW_HEIGHT / 3), 'ground');
+    ground.scale.setTo(1.25, 10);
 
     for (var i = 0; i < NUM_COLUMNS; ++i)
         brick_grid.push([]);
@@ -130,26 +134,37 @@ function collapseColumns() {
 // negative params for defaults. x default: random column. y default: 0.
 // number default: random int in {1, 2, ..., MAX_RANDOM}
 function Brick(col, row, number) {
-    if (col < 0)
+    // try 20 times to find an empty row; if none found, assume all are full:
+    var attempts = 0;
+    while (col < 0 && attempts < 20) {
         col = Math.floor(Math.random() * NUM_COLUMNS);
-
+        if (brick_grid[col].length == NUM_ROWS) {
+            col = -1;
+        }
+        ++attempts;
+    }
+    if (col < 0) {
+        console.log("failed to spawn a brick: looks pretty full...");
+        return null;
+    }
+    
     if (row < 0)
         row = findTopOfColumn(col);
 
     if (number < 0)
         number = Math.floor(Math.random() * MAX_RANDOM + 1);
 
-    // create brick:
+// create brick:
     var brick = bricks.create(colToX(col), 0, 'brick_orange'); // maybe rowToY()?
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
     bricks.add(brick);
     brick.number = number
     brick.anchor.set(.5);
-    brick.scale.setTo(.55, .55);
+    brick.scale.setTo(0.7, 0.7);
 
     brick_grid[col][row] = brick;
 
-    // brick number text:  
+// brick number text:  
     var text = game.add.text(0, 0, brick.number.toString(),
             {font: "42px Helvetica", fill: "#aaffff"});
     text.anchor.set(0.5);
@@ -157,7 +172,7 @@ function Brick(col, row, number) {
 
     sinkBrick(brick, row);
 
-    // brick mouse event:
+// brick mouse event:
     brick.highlighted = false;
     brick.inputEnabled = true;
     brick.events.onInputDown.add(clickBrick, this);
@@ -205,7 +220,7 @@ function colToX(col) {
 }
 
 function rowToY(row) {
-    return 400 - row * COLUMN_HEIGHT;
+    return PLAY_HEIGHT - row * ROW_HEIGHT;
 }
 
 function getCol(brick) {
