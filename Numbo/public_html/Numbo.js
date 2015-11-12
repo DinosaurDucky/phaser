@@ -2,9 +2,10 @@
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
 
-var SPAWN_TIMER = 2.00;                // param
-var MAX_RANDOM = 5;                 // param
-var COLLAPSE_EMPTY_COLUMNS = true; // param
+var SPAWN_TIMER = 1.00;             // param
+var TIMER_SCALAR = 0.85;            // param
+var MAX_RANDOM = -1;                 // param
+var COLLAPSE_EMPTY_COLUMNS = true;  // param
 var NUM_COLUMNS = 6                 // param
 var NUM_ROWS = 6                    // param
 var UI_WIDTH = 300;
@@ -244,8 +245,10 @@ function checkScore() {
             ++MAX_RANDOM;
             maxNumberText.text = 'max brick: ' + MAX_RANDOM;
         }
-        SPAWN_TIMER *= 0.9;
-        frequencyText.text = 'frequency: ' + SPAWN_TIMER.toFixed(3) + 's';
+        else {
+            SPAWN_TIMER *= TIMER_SCALAR;
+            frequencyText.text = 'frequency: ' + SPAWN_TIMER.toFixed(3) + 's';
+        }
     }
 }
 
@@ -259,33 +262,48 @@ function hitSpace() {
 }
 
 function collapseColumns() {
-    var middle_col = Math.floor(NUM_COLUMNS / 2);
-    collapseLeftSide(middle_col);
-    collapseRightSide(middle_col);
+    //var middle_col = Math.floor(NUM_COLUMNS / 2);
+    //collapseLeftSide(middle_col);
+    //collapseRightSide(middle_col);
+    collapseLeftSide(NUM_COLUMNS - 1);
     scootColumns();
 }
 
 function collapseLeftSide(col) {
-
-    // find out how many columns to the left of this must be collapsed:
-    var collapsable_cols = 0;
-    for (var left_iter = col; left_iter >= 0; --left_iter) {
-        if (brick_grid[left_iter].length > 0)
-            ++collapsable_cols;
-    }
-
-    // collapse that many rows:
-    while (0 <= col && col < NUM_COLUMNS && collapsable_cols > 0) {
+    var repeat = true;
+    for (; repeat == true && col >= 0; --col) {
         if (brick_grid[col].length == 0) {
-            brick_grid.splice(col, 1); // delete empty column
-            brick_grid.unshift([]); // insert new empty column at right
-        }
-        else {
-            --collapsable_cols;
+            brick_grid.splice(0, 0, brick_grid.splice(col, 1)[0]);
             ++col;
+            if (col == 0)
+                repeat = false;
         }
     }
 }
+
+/*
+ function collapseLeftSide(col) {
+ 
+ // find out how many columns to the left of this must be collapsed:
+ var collapsable_cols = 0;
+ for (var left_iter = col; left_iter >= 0; --left_iter) {
+ if (brick_grid[left_iter].length > 0)
+ ++collapsable_cols;
+ }
+ 
+ // collapse that many rows:
+ while (0 <= col && col < NUM_COLUMNS && collapsable_cols > 0) {
+ if (brick_grid[col].length == 0) {
+ brick_grid.splice(col, 1); // delete empty column
+ brick_grid.unshift([]); // insert new empty column at right
+ }
+ else {
+ --collapsable_cols;
+ ++col;
+ }
+ }
+ }
+ */
 
 function collapseRightSide(col) {
 
