@@ -1,11 +1,12 @@
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
-var SPAWN_TIMER = 3; // param
-var MAX_RANDOM = 5; // param
+
+var SPAWN_TIMER = 2.00;                // param
+var MAX_RANDOM = 5;                 // param
 var COLLAPSE_EMPTY_COLUMNS = true; // param
-var NUM_COLUMNS = 6 // param
-var NUM_ROWS = 6 // param
+var NUM_COLUMNS = 6                 // param
+var NUM_ROWS = 6                    // param
 var UI_WIDTH = 300;
 var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
@@ -13,6 +14,8 @@ var PLAY_HEIGHT = game.height - UI_HEIGHT;
 var COLUMN_WIDTH = Math.floor(PLAY_WIDTH / NUM_COLUMNS);
 var ROW_HEIGHT = Math.floor(PLAY_HEIGHT / NUM_ROWS);
 var NEXT_BRICK_ID = 0;
+var GAME_TIME = 0;
+var MAX_LEVEL_UP;
 
 var platforms;
 var cursors;
@@ -20,10 +23,15 @@ var bricks;
 var bottom_bricks;
 var lit_bricks = [];
 var brick_grid = []; //2d: [col][row]
+var levelUpPoints;
 
-var GAME_TIME = 0;
 var score = 0;
 var scoreText;
+var level = 1;
+var levelText;
+var frequencyText;
+var maxNumberText;
+
 
 function preload() {
     game.load.image('logo', 'phaser.png');
@@ -37,23 +45,46 @@ function preload() {
 
 function create() {
 
-    var sky = game.add.sprite(0, 0, 'sky');
-    sky.scale.setTo(5 / 8, 1);
-    platforms = game.add.group();
-    var ground = platforms.create(0,
-            PLAY_HEIGHT + Math.floor(ROW_HEIGHT / 3), 'ground');
-    ground.scale.setTo(1.25, 10);
+    // create background:
+    {
+        var sky = game.add.sprite(0, 0, 'sky');
+        sky.scale.setTo(5 / 8, 1);
+        platforms = game.add.group();
+        var ground = platforms.create(0,
+                PLAY_HEIGHT + Math.floor(ROW_HEIGHT / 3), 'ground');
+        ground.scale.setTo(1.25, 10);
 
-    for (var i = 0; i < NUM_COLUMNS; ++i)
-        brick_grid.push([]);
+    }
 
-    bricks = game.add.group(game, game, true, true);
+    // initialize brick_grid, bricks, bottom_bricks:
+    {
+        for (var i = 0; i < NUM_COLUMNS; ++i)
+            brick_grid.push([]);
 
-    bottom_bricks = game.add.group(game, game, true, true);
+        bricks = game.add.group(game, game, true, true);
 
-    scoreText = game.add.text(PLAY_WIDTH + 16, 16, 'score: 0',
-            {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+        bottom_bricks = game.add.group(game, game, true, true);
+    }
+    // create text objects
+    {
+        scoreText = game.add.text(PLAY_WIDTH + 16, 16, 'score: 0',
+                {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
 
+        levelText = game.add.text(PLAY_WIDTH + 16, 56, 'level: 1',
+                {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+
+        maxNumberText = game.add.text(PLAY_WIDTH + 16, 96,
+                'max brick: ' + MAX_RANDOM,
+                {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+
+        frequencyText = game.add.text(PLAY_WIDTH + 16, 136,
+                'frequency: ' + SPAWN_TIMER.toFixed(2) + 's',
+                {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+
+        levelUpPoints = {1: 7, 2: 14, 3: 22, 4: 32, 5: 45, 6: 62, 7: 84, 8: 112, 9: 147,
+            10: 190, 11: 242, 12: 304, 13: 377, 14: 462, 15: 560};
+        MAX_LEVEL_UP = Object.keys(levelUpPoints).length;
+    }
 
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
 
@@ -179,8 +210,8 @@ function checkSum(brick) {
         sum += lit_bricks[b].number;
 
     if (sum == 0) {
-        score += lit_bricks.length;
-        scoreText.text = 'Score: ' + score;
+        score += Math.floor(1.5 * lit_bricks.length - 1);
+        scoreText.text = 'score: ' + score;
         for (b in lit_bricks) {
             removeBrickById(lit_bricks[b].id);
             lit_bricks[b].kill();
@@ -188,6 +219,7 @@ function checkSum(brick) {
         lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
         bottom_bricks.destroy(true, true);
         sinkAll();
+        checkScore();
         if (COLLAPSE_EMPTY_COLUMNS)
             game.time.events.add(100, collapseColumns);
     }
@@ -200,6 +232,20 @@ function removeBrickById(id) {
                 brick_grid[col].splice(row, 1);
             }
         }
+    }
+}
+
+function checkScore() {
+    if (level < MAX_LEVEL_UP && score >= levelUpPoints[level]) {
+        ++level;
+        levelText.text = "level: " + level;
+
+        if (level & 1) {
+            ++MAX_RANDOM;
+            maxNumberText.text = 'max brick: ' + MAX_RANDOM;
+        }
+        SPAWN_TIMER *= 0.9;
+        frequencyText.text = 'frequency: ' + SPAWN_TIMER.toFixed(3) + 's';
     }
 }
 
