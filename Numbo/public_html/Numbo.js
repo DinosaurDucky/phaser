@@ -2,12 +2,13 @@
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
 
-var SPAWN_TIMER = 1.00;             // param
-var TIMER_SCALAR = 0.85;            // param
-var MAX_RANDOM = -1;                 // param
-var COLLAPSE_EMPTY_COLUMNS = true;  // param
-var NUM_COLUMNS = 6                 // param
-var NUM_ROWS = 6                    // param
+var SPAWN_TIMER = 2.00;             // param, defaut: 2.0
+var TIMER_SCALAR = 0.85;            // param, default: 0.85
+var MAX_RANDOM = 5;                 // param, default: 5
+var COLLAPSE_EMPTY_COLUMNS = true;  // param, default: true
+var ENABLE_LEVELUP = true;          // param, default: true
+var NUM_COLUMNS = 6                 // param, default: 6
+var NUM_ROWS = 6                    // param, default: 6
 var UI_WIDTH = 300;
 var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
@@ -157,7 +158,9 @@ function sinkAll() {
 }
 
 function clickBrick(brick) {
-    if (lit_bricks.length == 0 ||
+
+    if (lit_bricks.indexOf(brick) < 0 ||
+            lit_bricks.length == 0 ||
             areAdjacent(brick, lit_bricks[lit_bricks.length - 1])) {
         if (!brick.hightlighted) {
             brick.loadTexture('brick_orange_highlight');
@@ -237,6 +240,9 @@ function removeBrickById(id) {
 }
 
 function checkScore() {
+    if (ENABLE_LEVELUP == false)
+        return;
+
     if (level < MAX_LEVEL_UP && score >= levelUpPoints[level]) {
         ++level;
         levelText.text = "level: " + level;
@@ -262,75 +268,62 @@ function hitSpace() {
 }
 
 function collapseColumns() {
-    //var middle_col = Math.floor(NUM_COLUMNS / 2);
-    //collapseLeftSide(middle_col);
-    //collapseRightSide(middle_col);
-    collapseLeftSide(NUM_COLUMNS - 1);
+    if (NUM_COLUMNS < 3)
+        return;
+    var middle_col = Math.floor(NUM_COLUMNS / 2);
+    collapseLeftSide(middle_col);
+    collapseRightSide(middle_col);
+    //collapseLeftSide(NUM_COLUMNS - 1);
+    //collapseRightSide(0);
     scootColumns();
 }
 
 function collapseLeftSide(col) {
-    var repeat = true;
-    for (; repeat == true && col >= 0; --col) {
+    for (; col >= 0; --col) {
         if (brick_grid[col].length == 0) {
-            brick_grid.splice(0, 0, brick_grid.splice(col, 1)[0]);
-            ++col;
-            if (col == 0)
-                repeat = false;
+            var target = col;
+            while (target >= 0) {
+                if (brick_grid[target].length != 0) {
+                    swapBrickColumns(col, target);
+                    break;
+                }
+                --target;
+            }
         }
     }
 }
 
-/*
- function collapseLeftSide(col) {
- 
- // find out how many columns to the left of this must be collapsed:
- var collapsable_cols = 0;
- for (var left_iter = col; left_iter >= 0; --left_iter) {
- if (brick_grid[left_iter].length > 0)
- ++collapsable_cols;
- }
- 
- // collapse that many rows:
- while (0 <= col && col < NUM_COLUMNS && collapsable_cols > 0) {
- if (brick_grid[col].length == 0) {
- brick_grid.splice(col, 1); // delete empty column
- brick_grid.unshift([]); // insert new empty column at right
- }
- else {
- --collapsable_cols;
- ++col;
- }
- }
- }
- */
-
 function collapseRightSide(col) {
-
-    // find out how many columns to the right of this must be collapsed:
-    var collapsable_cols = 0;
-    for (var right_iter = col; right_iter < NUM_COLUMNS; ++right_iter) {
-        if (brick_grid[right_iter].length > 0)
-            ++collapsable_cols;
-    }
-
-    // collapse that many rows:
-    while (0 <= col && col < NUM_COLUMNS && collapsable_cols > 0) {
+    for (; col < NUM_COLUMNS; ++col) {
         if (brick_grid[col].length == 0) {
-            brick_grid.splice(col, 1); // delete empty column
-            brick_grid.push([]); // insert new empty column at left
-        }
-        else {
-            --collapsable_cols;
-            --col;
+            var target = col;
+            while (target < NUM_COLUMNS) {
+                if (brick_grid[target].length != 0) {
+                    swapBrickColumns(col, target);
+                    break;
+                }
+                ++target;
+            }
         }
     }
+}
+
+function swapBrickColumns(i, j) {
+    if (0 <= i && i < brick_grid.length && 0 <= j && j < brick_grid.length) {
+        var temp = brick_grid[i];
+        brick_grid[i] = brick_grid[j];
+        brick_grid[j] = temp;
+        return true;
+    }
+    else
+        return false;
 }
 
 function scootColumns() {
     for (var col = 0; col < brick_grid.length; ++col)
         scootColumn(col)
 }
+
 function scootColumn(col) {
     for (var row = 0; row < brick_grid[col].length; ++row)
         game.add.tween(brick_grid[col][row]).to({x: colToX(col)}, 100,
