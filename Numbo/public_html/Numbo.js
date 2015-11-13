@@ -9,6 +9,7 @@ var COLLAPSE_EMPTY_COLUMNS = true;  // param, default: true
 var ENABLE_LEVELUP = true;          // param, default: true
 var NUM_COLUMNS = 6                 // param, default: 6
 var NUM_ROWS = 6                    // param, default: 6
+
 var UI_WIDTH = 300;
 var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
@@ -26,6 +27,7 @@ var bottom_bricks;
 var lit_bricks = [];
 var brick_grid = []; //2d: [col][row]
 var levelUpPoints;
+var yay_text_database;
 
 var score = 0;
 var scoreText;
@@ -33,7 +35,7 @@ var level = 1;
 var levelText;
 var frequencyText;
 var maxNumberText;
-
+var yayText;
 
 function preload() {
     game.load.image('logo', 'phaser.png');
@@ -47,7 +49,7 @@ function preload() {
 
 function create() {
 
-    // create background:
+// create background:
     {
         var sky = game.add.sprite(0, 0, 'sky');
         sky.scale.setTo(5 / 8, 1);
@@ -55,48 +57,48 @@ function create() {
         var ground = platforms.create(0,
                 PLAY_HEIGHT + Math.floor(ROW_HEIGHT / 3), 'ground');
         ground.scale.setTo(1.25, 10);
-
     }
 
-    // initialize brick_grid, bricks, bottom_bricks:
+// initialize brick_grid, bricks, bottom_bricks:
     {
         for (var i = 0; i < NUM_COLUMNS; ++i)
             brick_grid.push([]);
-
         bricks = game.add.group(game, game, true, true);
-
         bottom_bricks = game.add.group(game, game, true, true);
     }
-    // create text objects
+// create text objects
     {
         scoreText = game.add.text(PLAY_WIDTH + 16, 16, 'score: 0',
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
-
         levelText = game.add.text(PLAY_WIDTH + 16, 56, 'level: 1',
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
-
         maxNumberText = game.add.text(PLAY_WIDTH + 16, 96,
                 'max brick: ' + MAX_RANDOM,
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
-
         frequencyText = game.add.text(PLAY_WIDTH + 16, 136,
                 'frequency: ' + SPAWN_TIMER.toFixed(2) + 's',
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
-
         levelUpPoints = {1: 7, 2: 14, 3: 22, 4: 32, 5: 45, 6: 62, 7: 84, 8: 112, 9: 147,
             10: 190, 11: 242, 12: 304, 13: 377, 14: 462, 15: 560};
         MAX_LEVEL_UP = Object.keys(levelUpPoints).length;
+
+        yay_text_database = {1: "booya!", 2: "ya-hwee!", 3: "ch'yea!", 4: "oh wow!",
+            5: "so gud!", 6: "holy crap"};
+        yayText = game.add.text(PLAY_WIDTH + Math.floor(UI_WIDTH / 2),
+                Math.floor(UI_HEIGHT * 2 / 3), "ferp"),
+                {fontSize: '96px Helvetica', align: 'center', stroke: '#dddddd',
+                    fill: '#964213', strokeThickness: 3};
     }
 
-    game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
 
+    game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
     game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR).onDown.add(hitSpace);
 }
 
 // negative params for defaults. x default: random column. y default: 0.
 // number default: random int in {1, 2, ..., MAX_RANDOM}
 function Brick(col, row, number) {
-    // try 20 times to find an empty row; if none found, assume all are full:
+// try 20 times to find an empty row; if none found, assume all are full:
     var attempts = 0;
     while (attempts < 20 && (col < 0 || brick_grid[col].length >= NUM_ROWS)) {
         col = Math.floor(Math.random() * NUM_COLUMNS);
@@ -104,12 +106,10 @@ function Brick(col, row, number) {
     }
     if (col < 0 || brick_grid[col].length >= NUM_ROWS)
         return null;
-
     if (row < 0)
         row = findTopOfColumn(col);
     if (number < 0)
         number = Math.floor(Math.random() * MAX_RANDOM + 1);
-
     // create brick:
     var brick = bricks.create(colToX(col), 0, 'brick_orange'); // maybe rowToY()?
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
@@ -118,23 +118,18 @@ function Brick(col, row, number) {
     brick.anchor.set(.5);
     brick.scale.setTo(0.7, 0.7);
     brick_grid[col][row] = brick;
-
     // brick number text:  
     var text = game.add.text(0, 0, brick.number.toString(),
             {font: "42px Helvetica", fill: "#aaffff"});
     text.anchor.set(0.5);
     brick.addChild(text);
-
     sinkBrick(brick, row);
-
     // brick mouse event:
     brick.highlighted = false;
     brick.inputEnabled = true;
     brick.events.onInputDown.add(clickBrick, this);
-
     if (COLLAPSE_EMPTY_COLUMNS)
         game.time.events.add(100, collapseColumns);
-
 }
 
 function brickMaker() {
@@ -159,9 +154,8 @@ function sinkAll() {
 
 function clickBrick(brick) {
 
-    if (lit_bricks.indexOf(brick) < 0 ||
-            lit_bricks.length == 0 ||
-            areAdjacent(brick, lit_bricks[lit_bricks.length - 1])) {
+    if (lit_bricks.length == 0 || (lit_bricks.indexOf(brick) < 0 &&
+            areAdjacent(brick, lit_bricks[lit_bricks.length - 1]) ) ) {
         if (!brick.hightlighted) {
             brick.loadTexture('brick_orange_highlight');
             brick.highlighted = true;
@@ -169,24 +163,20 @@ function clickBrick(brick) {
             copyToBottom(brick);
             if (lit_bricks.length >= 3)
                 checkSum(brick);
-
         }
     }
 }
 function areAdjacent(b1, b2) {
     if (b1 == b2)
         return false;
-
     var c1 = getCol(b1);
     var c2 = getCol(b2);
     if (Math.abs(c1 - c2) > 1)
         return false;
-
     var r1 = getRow(b1);
     var r2 = getRow(b2);
     if (Math.abs(r1 - r2) > 1)
         return false;
-
     return true;
 }
 function copyToBottom(brick) {
@@ -196,23 +186,19 @@ function copyToBottom(brick) {
     bottomBrick.number = brick.number;
     bottomBrick.anchor.set(0.5);
     bottomBrick.scale.setTo(.55, .55);
-
     // brick number text:    
     var text = game.add.text(0, 0, bottomBrick.number.toString(),
             {font: "42px Helvetica", fill: "#aaffff"});
     text.anchor.set(0.5);
     bottomBrick.addChild(text);
-
     return bottomBrick;
 }
 function checkSum(brick) {
     if (lit_bricks.length == 1)
         return;
-
     var sum = -2 * brick.number;
     for (b in lit_bricks)
         sum += lit_bricks[b].number;
-
     if (sum == 0) {
         score += Math.floor(1.5 * lit_bricks.length - 1);
         scoreText.text = 'score: ' + score;
@@ -242,11 +228,9 @@ function removeBrickById(id) {
 function checkScore() {
     if (ENABLE_LEVELUP == false)
         return;
-
     if (level < MAX_LEVEL_UP && score >= levelUpPoints[level]) {
         ++level;
         levelText.text = "level: " + level;
-
         if (level & 1) {
             ++MAX_RANDOM;
             maxNumberText.text = 'max brick: ' + MAX_RANDOM;
@@ -255,6 +239,14 @@ function checkScore() {
             SPAWN_TIMER *= TIMER_SCALAR;
             frequencyText.text = 'frequency: ' + SPAWN_TIMER.toFixed(3) + 's';
         }
+
+        var randYayString = yay_text_database[Math.floor(Math.random() *
+                Object.keys(yay_text_database).length)];
+        yayText.text = randYayString;
+
+
+
+
     }
 }
 
@@ -268,13 +260,8 @@ function hitSpace() {
 }
 
 function collapseColumns() {
-    if (NUM_COLUMNS < 3)
-        return;
     var middle_col = Math.floor(NUM_COLUMNS / 2);
     collapseLeftSide(middle_col);
-    collapseRightSide(middle_col);
-    //collapseLeftSide(NUM_COLUMNS - 1);
-    //collapseRightSide(0);
     scootColumns();
 }
 
@@ -361,5 +348,4 @@ function getRow(brick) {
 
 function update() {
     ++GAME_TIME;
-
 }
