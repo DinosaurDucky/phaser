@@ -28,6 +28,7 @@ var lit_bricks = [];
 var brick_grid = []; //2d: [col][row]
 var levelUpPoints;
 var yay_text_database;
+var text_group;
 var random_weighted;
 
 var score = 0;
@@ -79,26 +80,34 @@ function create() {
 
 // create text objects
     {
+        text_group = game.add.group(game, game, true, true);
+
         scoreText = game.add.text(PLAY_WIDTH + 16, 16, 'score: 0',
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+        text_group.add(scoreText);
         levelText = game.add.text(PLAY_WIDTH + 16, 56, 'level: 1',
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+        text_group.add(levelText);
         maxNumberText = game.add.text(PLAY_WIDTH + 16, 96,
                 'max brick: ' + MAX_RANDOM,
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+        text_group.add(maxNumberText);
         frequencyText = game.add.text(PLAY_WIDTH + 16, 136,
                 'frequency: ' + SPAWN_TIMER.toFixed(2) + 's',
                 {fontSize: '32px Helvetica', fill: '#ffffff', align: 'center'});
+        text_group.add(frequencyText);
+
         levelUpPoints = {1: 7, 2: 14, 3: 22, 4: 32, 5: 45, 6: 62, 7: 84, 8: 112, 9: 147,
             10: 190, 11: 242, 12: 304, 13: 377, 14: 462, 15: 560};
         MAX_LEVEL_UP = Object.keys(levelUpPoints).length;
 
-        yay_text_database = {0: "w00t!", 1: "booya!", 2: "ya-hwee!",
+        yay_text_database = {0: "w00t!", 1: "booya!", 2: "ya-hoo!",
             3: "ch'yea!", 4: "oh wow!", 5: "so gud!", 6: "holy crap"};
         yayText = game.add.text(PLAY_WIDTH + Math.floor(UI_WIDTH / 2), 250, "",
                 {align: 'center', stroke: '#dddddd', fill: '#d94243', strokeThickness: 3});
         yayText.fontSize = 50;
         yayText.anchor.set(0.5);
+        text_group.add(yayText);
     }
 
 
@@ -121,6 +130,7 @@ function Brick(col, row, number) {
         row = findTopOfColumn(col);
     if (number < 0)
         number = random_weighted[Math.floor(Math.random() * random_weighted.length)];
+
     // create brick:
     var brick = bricks.create(colToX(col), 0, 'brick_orange'); // maybe rowToY()?
     brick.id = NEXT_BRICK_ID++; // unique id of THIS brick
@@ -129,12 +139,14 @@ function Brick(col, row, number) {
     brick.anchor.set(.5);
     brick.scale.setTo(0.7, 0.7);
     brick_grid[col][row] = brick;
+
     // brick number text:  
     var text = game.add.text(0, 0, brick.number.toString(),
             {font: "42px Helvetica", fill: "#aaffff"});
     text.anchor.set(0.5);
     brick.addChild(text);
     sinkBrick(brick, row);
+
     // brick mouse event:
     brick.highlighted = false;
     brick.inputEnabled = true;
@@ -259,17 +271,17 @@ function checkScore() {
 }
 
 function yayEffect() {
-    yayText = game.add.text(PLAY_WIDTH + Math.floor(UI_WIDTH / 2), 250, "",
+    yayText = game.add.text(0, 250, "",
             {align: 'center', stroke: '#dddddd', fill: '#d94243', strokeThickness: 3});
-    yayText.fontSize = 50;
+    text_group.add(yayText);
+    yayText.fontSize = 20;
     yayText.anchor.set(0.5);
 
     var randIndex = Math.floor(Math.random() *
             Object.keys(yay_text_database).length);
     var randYayString = "" + yay_text_database[randIndex];
-    yayText.x = 0;
     yayText.text = randYayString;
-    yayText.fontSize = 20;
+
     game.add.tween(yayText).to({fontSize: 80, x: game.world.centerX}, 100,
             Phaser.Easing.Linear.In, true);
     game.add.tween(yayText).to({fontSize: 80}, 150,
@@ -284,7 +296,6 @@ function yayEffectEnd() {
         yayText.destroy();
         yayText = null;
     }, this);
-
 
 }
 
