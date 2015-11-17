@@ -9,7 +9,7 @@ var COLLAPSE_EMPTY_COLUMNS = true;  // param, default: true
 var ENABLE_LEVELUP = true;          // param, default: true
 var NUM_COLUMNS = 6;                // param, default: 6
 var NUM_ROWS = 6;                    // param, default: 6
- 
+
 var UI_WIDTH = 300;
 var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
@@ -21,7 +21,7 @@ var GAME_TIME = 0;
 var MAX_LEVEL_UP;
 
 var platforms;
-var cursors;
+var operators;
 var bricks;
 var bottom_bricks;
 var lit_bricks = [];
@@ -31,6 +31,10 @@ var yay_text_database;
 var text_group;
 var random_weighted;
 
+var current_operator = '+';
+var two_sides = false;
+var LHS = 0;
+var RHS = 0;
 var score = 0;
 var scoreText;
 var level = 1;
@@ -46,6 +50,8 @@ function preload() {
     game.load.image('star', 'assets/star.png');
     game.load.image('brick_orange', 'assets/brick_orange_blank.png');
     game.load.image('brick_orange_highlight', 'assets/brick_orange_highlight.png');
+    game.load.image('operator_pink', 'assets/operator_pink_blank.png');
+    game.load.image('operator_pink_highlight', 'assets/operator_pink_highlight.png');
     game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
 }
 
@@ -69,6 +75,21 @@ function create() {
         bottom_bricks = game.add.group(game, game, true, true);
     }
 
+    // initialize operator buttons:
+    {
+        operators = game.add.group(game, game, true, true);
+
+        Operator('+', Math.floor(PLAY_WIDTH + UI_WIDTH / 3),
+                Math.floor(PLAY_HEIGHT - 2 * UI_HEIGHT / 3));
+        Operator('-', Math.floor(PLAY_WIDTH + 2 * UI_WIDTH / 3),
+                Math.floor(PLAY_HEIGHT - 2 * UI_HEIGHT / 3));
+        Operator('×', Math.floor(PLAY_WIDTH + UI_WIDTH / 3),
+                Math.floor(PLAY_HEIGHT - UI_HEIGHT / 3));
+        Operator('÷', Math.floor(PLAY_WIDTH + 2 * UI_WIDTH / 3),
+                Math.floor(PLAY_HEIGHT - UI_HEIGHT / 3));
+        Operator('=', Math.floor(PLAY_WIDTH + UI_WIDTH / 2), PLAY_HEIGHT);
+
+    }
 
     // initialize random weighted array:
     {
@@ -113,6 +134,7 @@ function create() {
 
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
     game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR).onDown.add(hitSpace);
+    game.input.keyboard.addKey(Phaser.Keyboard.ENTER).onDown.add(hitEnter);
 }
 
 // negative params for defaults. x default: random column. y default: 0.
@@ -155,6 +177,52 @@ function Brick(col, row, number) {
         game.time.events.add(100, collapseColumns);
 }
 
+/*      ÷ × - + =         */
+function Operator(op, x, y) {
+    var operator = operators.create(x, y, 'operator_pink');
+    operator.op = op;
+    operators.add(operator);
+    if (operator.op == '-')
+        operator.anchor.set(.5, .5);
+    else
+        operator.anchor.set(.5, .55);
+
+    operator.scale.setTo(0.7, 0.7);
+    var text = game.add.text(0, 0, operator.op.toString(),
+            {font: "84px Helvetica", fill: "#aaffff"});
+    text.anchor.set(0.5);
+    operator.addChild(text);
+
+    // operator mouse event:
+    operator.highlighted = false;
+    operator.inputEnabled = true;
+    operator.events.onInputDown.add(clickOperator, this);
+}
+
+function clickOperator(operator) {
+    if (operator.op == "=" && two_sides == false) {
+        two_sides = true;
+    }
+    else {
+
+        operators.forEach(function (O) {
+            if (O.highlighted) {
+                O.highlighted = false;
+                O.loadTexture('operator_pink');
+            }
+        }, this);
+        current_operator = operator.op;
+        operator.loadTexture('operator_pink_highlight');
+        operator.highlighted = true;
+    }
+    copyToBottom(operator);
+}
+
+function hitEnter() {
+    ;
+}
+
+
 function brickMaker() {
     Brick(-1, -1, -1);
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker);
@@ -176,7 +244,6 @@ function sinkAll() {
 }
 
 function clickBrick(brick) {
-
     if (lit_bricks.length == 0 || (lit_bricks.indexOf(brick) < 0 &&
             areAdjacent(brick, lit_bricks[lit_bricks.length - 1]))) {
         if (!brick.hightlighted) {
@@ -184,11 +251,55 @@ function clickBrick(brick) {
             brick.highlighted = true;
             lit_bricks.push(brick);
             copyToBottom(brick);
-            if (lit_bricks.length >= 3)
-                checkSum(brick);
+            //if (lit_bricks.length >= 3)
+            //    checkSum(brick);
         }
     }
+
+    if (two_sides) {
+        if (RHS == 0)
+            RHS = brick.number;
+        else {
+            RHS = doOperation(current_operator, RHS, brick.number);
+        }
+    }
+    else {
+        if (LHS == 0)
+            LHS = brick.number;
+        else {
+            LHS = doOperation(current_operator, LHS, brick.number);
+        }
+    }
+    console.log("LHS: " + LHS + ", RHS: " + RHS);
+
+    checkEquality();
 }
+
+
+function checkEquality() {
+    if (two_sides && LHS == RHS) {
+        score += Math.floor(1.5 * lit_bricks.length - 1);
+        scoreText.text = 'score: ' + score;
+        for (b in lit_bricks) {
+            removeBrickById(lit_bricks[b].id);
+            lit_bricks[b].kill();
+        }
+        lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
+        bottom_bricks.destroy(true, true);
+        sinkAll();
+        checkScore();
+        yayEffect();
+
+        LHS = 0;
+        RHS = 0;
+        two_sides = false;
+
+        if (COLLAPSE_EMPTY_COLUMNS)
+            game.time.events.add(100, collapseColumns);
+    }
+
+}
+
 function areAdjacent(b1, b2) {
     if (b1 == b2)
         return false;
@@ -202,20 +313,50 @@ function areAdjacent(b1, b2) {
         return false;
     return true;
 }
+
 function copyToBottom(brick) {
-    var index = lit_bricks.length;
-    var bottomBrick = bottom_bricks.create(index * COLUMN_WIDTH / 2, 500, 'brick_orange');
+    var index = bottom_bricks.length;
+    var bottomBrick;
+     
+    if (brick.parent == operators) {
+        bottomBrick = bottom_bricks.create((index + 1) * COLUMN_WIDTH / 2, 500, 'operator_pink');
+        bottomBrick.op = brick.op;
+        var text = game.add.text(0, 0, bottomBrick.op,
+                {font: "42px Helvetica", fill: "#aaffff"});
+    }
+    else if (brick.parent == bricks) {
+        bottomBrick = bottom_bricks.create((index + 1) * COLUMN_WIDTH / 2, 500, 'brick_orange');
+        bottomBrick.number = brick.number; 
+        var text = game.add.text(0, 0, bottomBrick.number.toString(),
+                {font: "42px Helvetica", fill: "#aaffff"});
+    }
     bottom_bricks.add(bottomBrick);
-    bottomBrick.number = brick.number;
+    
     bottomBrick.anchor.set(0.5);
     bottomBrick.scale.setTo(.55, .55);
-    // brick number text:    
-    var text = game.add.text(0, 0, bottomBrick.number.toString(),
-            {font: "42px Helvetica", fill: "#aaffff"});
     text.anchor.set(0.5);
     bottomBrick.addChild(text);
+
     return bottomBrick;
 }
+
+// old version (dont work w/ operators)
+/*
+ function copyToBottom(brick) {
+ var index = lit_bricks.length;
+ var bottomBrick = bottom_bricks.create(index * COLUMN_WIDTH / 2, 500, 'brick_orange');
+ bottom_bricks.add(bottomBrick);
+ bottomBrick.number = brick.number;
+ bottomBrick.anchor.set(0.5);
+ bottomBrick.scale.setTo(.55, .55);
+ // brick number text:    
+ var text = game.add.text(0, 0, bottomBrick.number.toString(),
+ {font: "42px Helvetica", fill: "#aaffff"});
+ text.anchor.set(0.5);
+ bottomBrick.addChild(text);
+ return bottomBrick;
+ }
+ */
 function checkSum(brick) {
     if (lit_bricks.length == 1)
         return;
@@ -301,12 +442,49 @@ function yayEffectEnd() {
 
 
 function hitSpace() {
+    LHS = 0;
+    RHS = 0;
+    two_sides = false;
+
     for (b in lit_bricks) {
         lit_bricks[b].loadTexture('brick_orange');
         lit_bricks[b].highlighted = false;
     }
     lit_bricks.splice(0, lit_bricks.length); // empty lit_bricks
     bottom_bricks.destroy(true, true);
+}
+
+
+/*      ÷ × - + =         */
+function doOperation(operator, L, R) {
+    operator = operator || "";
+    if (operator == "=") {
+        if (two_sides == false)
+            two_sides = true;
+        else {
+            console.log("too many equalses!");
+        }
+    }
+    else if (L !== undefined && R !== undefined) {
+        switch (operator) {
+            case '+':
+                return L + R;
+                break;
+            case '-':
+                return L - R;
+                break;
+            case '×':
+                return L * R;
+                break;
+            case '÷':
+                return L % R ? L : L / R;
+                break;
+            default:
+                console.log("bad operator!");
+                return 0;
+        }
+    }
+    return 0;
 }
 
 function collapseColumns() {
