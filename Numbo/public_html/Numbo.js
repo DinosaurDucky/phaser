@@ -9,7 +9,7 @@ var COLLAPSE_EMPTY_COLUMNS = true;  // param, default: true
 var ENABLE_LEVELUP = true;          // param, default: true
 var NUM_COLUMNS = 6;                // param, default: 6
 var NUM_ROWS = 6;                    // param, default: 6
-
+ 
 var UI_WIDTH = 300;
 var UI_HEIGHT = 200;
 var PLAY_WIDTH = game.width - UI_WIDTH;
