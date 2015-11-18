@@ -2,13 +2,13 @@
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '',
         {preload: preload, create: create, update: update});
 
-var SPAWN_TIMER = 2.00;             // param, defaut: 2.0
+var SPAWN_TIMER = 3.00;             // param, defaut: 2.0
 var TIMER_SCALAR = 0.85;            // param, default: 0.85
-var MAX_RANDOM = 5;                 // param, default: 5
+var MAX_RANDOM = 10;                // param, default: 10
 var COLLAPSE_EMPTY_COLUMNS = true;  // param, default: true
 var ENABLE_LEVELUP = true;          // param, default: true
 var NUM_COLUMNS = 6;                // param, default: 6
-var NUM_ROWS = 6;                    // param, default: 6
+var NUM_ROWS = 6;                   // param, default: 6
 
 var UI_WIDTH = 300;
 var UI_HEIGHT = 200;
@@ -60,11 +60,8 @@ function create() {
 // create background:
     {
         var sky = game.add.sprite(0, 0, 'sky');
-        sky.scale.setTo(5 / 8, 1);
-        platforms = game.add.group();
-        var ground = platforms.create(0,
-                PLAY_HEIGHT + Math.floor(ROW_HEIGHT / 3), 'ground');
-        ground.scale.setTo(1.25, 10);
+        sky.scale.setTo(5 / 8, PLAY_HEIGHT / (game.height - ROW_HEIGHT/2));
+        game.stage.backgroundColor = '#002222';
     }
 
 // initialize brick_grid, bricks, bottom_bricks:
@@ -264,9 +261,6 @@ function clickBrick(brick) {
                 copyToBottom(current_operator);
         }
         copyToBottom(brick);
-        //if (lit_bricks.length >= 3)
-        //    checkSum(brick);
-
 
         if (two_sides) {
             if (RHS == 0)
@@ -290,7 +284,7 @@ function clickBrick(brick) {
 
 
 function checkEquality() {
-    if (two_sides && LHS == RHS) {
+    if (two_sides && lit_bricks.length >= 3 && LHS == RHS) {
         score += Math.floor(1.5 * lit_bricks.length - 1);
         scoreText.text = 'score: ' + score;
         for (b in lit_bricks) {
@@ -413,8 +407,9 @@ function checkScore() {
         ++level;
         levelText.text = "level: " + level;
         if (level & 1) {
-            ++MAX_RANDOM;
-            random_weighted.push(MAX_RANDOM);
+            for (var count = 1; count <= 5; ++count)
+                random_weighted.push(MAX_RANDOM + count);
+            MAX_RANDOM += 5;
             maxNumberText.text = 'max brick: ' + MAX_RANDOM;
         }
         else {
