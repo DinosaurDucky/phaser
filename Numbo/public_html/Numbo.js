@@ -31,7 +31,7 @@ var yay_text_database;
 var text_group;
 var random_weighted;
 
-var current_operator = '+';
+var current_operator;
 var two_sides = false;
 var LHS = 0;
 var RHS = 0;
@@ -79,13 +79,13 @@ function create() {
     {
         operators = game.add.group(game, game, true, true);
 
-        Operator('+', Math.floor(PLAY_WIDTH + UI_WIDTH / 3),
-                Math.floor(PLAY_HEIGHT - 2 * UI_HEIGHT / 3));
-        Operator('-', Math.floor(PLAY_WIDTH + 2 * UI_WIDTH / 3),
-                Math.floor(PLAY_HEIGHT - 2 * UI_HEIGHT / 3));
         Operator('×', Math.floor(PLAY_WIDTH + UI_WIDTH / 3),
-                Math.floor(PLAY_HEIGHT - UI_HEIGHT / 3));
+                Math.floor(PLAY_HEIGHT - 2 * UI_HEIGHT / 3));
         Operator('÷', Math.floor(PLAY_WIDTH + 2 * UI_WIDTH / 3),
+                Math.floor(PLAY_HEIGHT - 2 * UI_HEIGHT / 3));
+        Operator('+', Math.floor(PLAY_WIDTH + UI_WIDTH / 3),
+                Math.floor(PLAY_HEIGHT - UI_HEIGHT / 3));
+        Operator('-', Math.floor(PLAY_WIDTH + 2 * UI_WIDTH / 3),
                 Math.floor(PLAY_HEIGHT - UI_HEIGHT / 3));
         Operator('=', Math.floor(PLAY_WIDTH + UI_WIDTH / 2), PLAY_HEIGHT);
 
@@ -135,6 +135,13 @@ function create() {
     game.time.events.add(Phaser.Timer.SECOND * SPAWN_TIMER, brickMaker, this);
     game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR).onDown.add(hitSpace);
     game.input.keyboard.addKey(Phaser.Keyboard.ENTER).onDown.add(hitEnter);
+    game.input.keyboard.addKey(Phaser.Keyboard.Q).onDown.add(hitMultiply);
+    game.input.keyboard.addKey(Phaser.Keyboard.W).onDown.add(hitDivide);
+    game.input.keyboard.addKey(Phaser.Keyboard.A).onDown.add(hitAdd);
+    game.input.keyboard.addKey(Phaser.Keyboard.S).onDown.add(hitSubtract);
+    game.input.keyboard.addKey(Phaser.Keyboard.Z).onDown.add(hitEquals);
+    game.input.keyboard.addKey(Phaser.Keyboard.X).onDown.add(hitEquals);
+
 }
 
 // negative params for defaults. x default: random column. y default: 0.
@@ -202,6 +209,7 @@ function Operator(op, x, y) {
 function clickOperator(operator) {
     if (operator.op == "=" && two_sides == false) {
         two_sides = true;
+        copyToBottom(operator);
     }
     else {
 
@@ -211,11 +219,10 @@ function clickOperator(operator) {
                 O.loadTexture('operator_pink');
             }
         }, this);
-        current_operator = operator.op;
+        current_operator = operator;
         operator.loadTexture('operator_pink_highlight');
         operator.highlighted = true;
     }
-    copyToBottom(operator);
 }
 
 function hitEnter() {
@@ -249,30 +256,36 @@ function clickBrick(brick) {
         if (!brick.hightlighted) {
             brick.loadTexture('brick_orange_highlight');
             brick.highlighted = true;
+
             lit_bricks.push(brick);
-            copyToBottom(brick);
-            //if (lit_bricks.length >= 3)
-            //    checkSum(brick);
-        }
-    }
 
-    if (two_sides) {
-        if (RHS == 0)
-            RHS = brick.number;
-        else {
-            RHS = doOperation(current_operator, RHS, brick.number);
+            if (bottom_bricks.length > 0
+                    && bottom_bricks.getTop().type == "number")
+                copyToBottom(current_operator);
         }
-    }
-    else {
-        if (LHS == 0)
-            LHS = brick.number;
-        else {
-            LHS = doOperation(current_operator, LHS, brick.number);
-        }
-    }
-    console.log("LHS: " + LHS + ", RHS: " + RHS);
+        copyToBottom(brick);
+        //if (lit_bricks.length >= 3)
+        //    checkSum(brick);
 
-    checkEquality();
+
+        if (two_sides) {
+            if (RHS == 0)
+                RHS = brick.number;
+            else {
+                RHS = doOperation(current_operator.op, RHS, brick.number);
+            }
+        }
+        else {
+            if (LHS == 0)
+                LHS = brick.number;
+            else {
+                LHS = doOperation(current_operator.op, LHS, brick.number);
+            }
+        }
+        console.log("LHS: " + LHS + ", RHS: " + RHS);
+
+        checkEquality();
+    }
 }
 
 
@@ -317,21 +330,23 @@ function areAdjacent(b1, b2) {
 function copyToBottom(brick) {
     var index = bottom_bricks.length;
     var bottomBrick;
-     
+
     if (brick.parent == operators) {
         bottomBrick = bottom_bricks.create((index + 1) * COLUMN_WIDTH / 2, 500, 'operator_pink');
+        bottomBrick.type = "operator";
         bottomBrick.op = brick.op;
         var text = game.add.text(0, 0, bottomBrick.op,
                 {font: "42px Helvetica", fill: "#aaffff"});
     }
     else if (brick.parent == bricks) {
         bottomBrick = bottom_bricks.create((index + 1) * COLUMN_WIDTH / 2, 500, 'brick_orange');
-        bottomBrick.number = brick.number; 
+        bottomBrick.type = "number";
+        bottomBrick.number = brick.number;
         var text = game.add.text(0, 0, bottomBrick.number.toString(),
                 {font: "42px Helvetica", fill: "#aaffff"});
     }
     bottom_bricks.add(bottomBrick);
-    
+
     bottomBrick.anchor.set(0.5);
     bottomBrick.scale.setTo(.55, .55);
     text.anchor.set(0.5);
@@ -440,6 +455,50 @@ function yayEffectEnd() {
 
 }
 
+function hitAdd() {
+    operators.forEach(function (O) {
+        if (O.op == '+') {
+            clickOperator(O);
+            return;
+        }
+    }, this);
+}
+
+function hitSubtract() {
+    operators.forEach(function (O) {
+        if (O.op == '-') {
+            clickOperator(O);
+            return;
+        }
+    }, this);
+}
+
+function hitMultiply() {
+    operators.forEach(function (O) {
+        if (O.op == '×') {
+            clickOperator(O);
+            return;
+        }
+    }, this);
+
+}
+function hitDivide() {
+    operators.forEach(function (O) {
+        if (O.op == '÷') {
+            clickOperator(O);
+            return;
+        }
+    }, this);
+}
+
+function hitEquals() {
+    operators.forEach(function (O) {
+        if (O.op == '=') {
+            clickOperator(O);
+            return;
+        }
+    }, this);
+}
 
 function hitSpace() {
     LHS = 0;
